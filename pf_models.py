@@ -88,26 +88,36 @@ class Pipeout(Pipeline):
         super().__init__(steps, memory)
         self.wrk_mode = mode
         self.rates = rates
+        #self.opt = opt
          
+    def to_bins(self, x, borders):
+        for i in range(len(borders)):
+            if x <= borders[i]:
+                return i
+        return len(borders)
+
     def predict(self,*args,**kwargs):
         yh = super(Pipeout,self).predict(*args,**kwargs)
         
-        if self.wrk_mode == 'class':
+        if self.wrk_mode == 'regr':
             return yh
         
-        l = len(yh)
-        d = dict(zip(range(l),yh))
-        sorted_by_value = sorted(d.items(), key=lambda kv: kv[1])
-        thrs = []
-        cnt = 0
-        for i,k in enumerate(sorted_by_value):
-            if cnt<5 and i/l > self.rates[cnt]:
-                cnt+=1
-                thrs.append(k[1])
-        #thrs.append(4)
-        thrs = np.array(thrs)
-        print(thrs)
-        res = np.repeat(yh[np.newaxis,...], 4, axis=0) > np.repeat(thrs[np.newaxis,...], l, axis=0).T
-        yt = res.sum(axis=0)
-
+        elif self.wrk_mode == 'cool':
+            l = len(yh)
+            d = dict(zip(range(l),yh))
+            sorted_by_value = sorted(d.items(), key=lambda kv: kv[1])
+            thrs = []
+            cnt = 0
+            for i,k in enumerate(sorted_by_value):
+                if cnt<5 and i/l > self.rates[cnt]:
+                    cnt+=1
+                    thrs.append(k[1])
+            #thrs.append(4)
+            thrs = np.array(thrs)
+            print(thrs)
+            res = np.repeat(yh[np.newaxis,...], 4, axis=0) > np.repeat(thrs[np.newaxis,...], l, axis=0).T
+            yt = res.sum(axis=0)
+        else:
+            yt = np.array([self.to_bins(y,self.rates) for y in yh])
+            
         return yt
